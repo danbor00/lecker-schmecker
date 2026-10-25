@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Konfetti">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#72ecf7">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<title>Konfetti – Partyspiele für Kinder ab 2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&display=swap">
+<style>
+  /* Ein Bildschirm, ein Canvas: das ganze Spiel wird gezeichnet. Feste Kinderzimmer-Farbwelt, kein Dunkelmodus. */
+  :root { color-scheme: light; }
+  html { height: 100%; box-sizing: border-box; padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px) 0; background: #72ecf7; }
+  body { height: 100%; }
+  body {
+    margin: 0; overflow: hidden; background: #72ecf7; color: #2b1d14;
+    overscroll-behavior: none; touch-action: none;
+    -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
+    font-family: "Fredoka", ui-rounded, "Arial Rounded MT Bold", system-ui, sans-serif;
+  }
+  #game { display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+</style>
+</head>
+<body>
+<canvas id="game" role="img" aria-label="Konfetti – Partyspiele für Kinder ab 2 und ab 4"></canvas>
+<script src="konfetti.js"></script>
+<script>
+// Offline-Betrieb: nach dem ersten Start werden alle Dateien im Browser gespeichert.
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) { window.addEventListener('load', () => { navigator.serviceWorker.register('sw.js').catch(() => {}); }); }
+</script>
+</body>
+</html>
