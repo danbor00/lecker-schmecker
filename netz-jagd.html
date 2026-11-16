@@ -154,6 +154,21 @@ function drawHeroBack(h,ph,air,slide,t){
   drawHeadBack(h,t,ph);
   ctx.restore();
 }
+function drawHeroSwing(h,t,th,side,sway,air){
+  const lim=h.limb;
+  ctx.save();ctx.translate(0,-0.46);ctx.rotate(sway);const tk=air?0.12:0;
+  rrect(-0.18,0,0.16,0.42-tk,0.07);fillStroke(lim,LW);rrect(0.02,-0.02,0.16,0.4-tk,0.07);fillStroke(lim,LW);
+  rrect(-0.21,0.32-tk,0.2,0.12,0.05);fillStroke(h.shoe,LW);rrect(0.01,0.3-tk,0.2,0.12,0.05);fillStroke(h.shoe,LW);ctx.restore();
+  ctx.save();ctx.translate(-side*0.26,-0.8);ctx.rotate(side*(0.55+Math.sin(t*6)*0.12));rrect(-0.075,0,0.15,0.36,0.07);fillStroke(lim,LW);circ(0,0.37,0.08);fillStroke(h.fur,LW);ctx.restore();
+  rrect(-0.28,-0.88,0.56,0.5,0.2);fillStroke(h.suit,LW);
+  ctx.fillStyle=h.cape;ctx.fillRect(-0.27,-0.5,0.54,0.07);
+  drawTail(h,t);
+  const w=Math.sin(t*9)*0.08,f=-side*0.12;
+  ctx.beginPath();ctx.moveTo(-0.22,-0.86);ctx.lineTo(0.22,-0.86);ctx.quadraticCurveTo(0.4+w+f,-0.45,0.44+w+f,-0.12);ctx.quadraticCurveTo(0.14+f,-0.02-w,f,-0.08);ctx.quadraticCurveTo(-0.14+f,-0.02+w,-0.44-w+f,-0.12);ctx.quadraticCurveTo(-0.4-w+f,-0.45,-0.22,-0.86);ctx.closePath();fillStroke(h.cape,LW);
+  drawEmblem(h.emblem,0,-0.58,0.09,'rgba(255,255,255,0.85)');
+  drawHeadBack(h,t,t*6);
+  ctx.save();ctx.translate(side*0.26,-0.8);ctx.rotate(th);rrect(-0.075,0,0.15,0.4,0.07);fillStroke(lim,LW);circ(0,0.42,0.09);fillStroke(h.fur,LW);ctx.restore();
+}
 function flame(x,y,t,sz){sz=sz||1;ell(x,y+0.06*sz,0.08*sz,(0.13+0.04*Math.sin(t*40+x*9))*sz);ctx.fillStyle='#ffb020';ctx.fill();ell(x,y+0.03*sz,0.045*sz,0.07*sz);ctx.fillStyle='#fff6b0';ctx.fill();}
 function drawVehicle(h,t){
   const c=h.vehCol;
@@ -357,7 +372,8 @@ function startChase(){
   W0.pz=0;W0.bl.length=0;W0.br.length=0;CAMX=0;
   Object.assign(G,{lane:0,x:0,y:0,vy:0,slideT:0,stumbleT:0,vehT:0,ph:0,curSpd:0,objs:[],nets:[],parts:[],nextSpawn:26,netCD:0,introT:2.4,saidRange:false,caughtT:0,
     vil:{x:0,lane:0,dist:mode===2?26:24,hits:0,switchT:3,y:0,vy:0,ph:0,dropT:1,hitFlash:0},
-    speedBase:mode===2?8:9.5+G.vi*0.8,vilScr:null,heroX:W/2});
+    speedBase:mode===2?8:9+G.vi*0.6,vilScr:null,heroX:W/2,zip:0,zipSide:1,jumpT:0,swU:0,swOff:0.4,
+    sw:{startZ:0,len:8,ax:EDGE,ay:6,az:4.8,side:1,shoot:1}});
   say(VILLAINS[G.vi].call);
 }
 function nextVillain(){
@@ -375,18 +391,19 @@ function spawnRow(z){
     for(let i=0;i<5;i++){const li=zig?clamp(l+(i>2?(l<=0?1:-1):0),-1,1):l;G.objs.push({kind:'star',x:li*LANE_W,y:0.6,z:z+i*1.5});}
     return;
   }
+  if(Math.random()<0.6){const l=ln();for(let i=0;i<5;i++)G.objs.push({kind:'star',x:l*LANE_W,y:i===2?1.5:0.6,z:z+i*1.5});return;}
   const types=G.vi===0?['hurdle','crate','crate','hurdle']:['hurdle','crate','banner','crate','hurdle'];
   const t=types[Math.floor(Math.random()*types.length)];
-  if(t==='crate'){const lanes=[-1,0,1].sort(()=>Math.random()-0.5).slice(0,Math.random()<0.4?2:1);for(const l of lanes)G.objs.push({kind:'obs',type:'crate',x:l*LANE_W,z});
+  if(t==='crate'){const lanes=[-1,0,1].sort(()=>Math.random()-0.5).slice(0,Math.random()<0.2?2:1);for(const l of lanes)G.objs.push({kind:'obs',type:'crate',x:l*LANE_W,z});
     const free=[-1,0,1].find(l=>!lanes.includes(l));for(let i=0;i<3;i++)G.objs.push({kind:'star',x:free*LANE_W,y:0.6,z:z-1.5+i*1.5});}
-  else{const lanes=Math.random()<0.5?[-1,0,1]:[ln()];for(const l of lanes)G.objs.push({kind:'obs',type:t,x:l*LANE_W,z});
+  else{const lanes=Math.random()<0.2?[-1,0,1]:[ln()];for(const l of lanes)G.objs.push({kind:'obs',type:t,x:l*LANE_W,z});
     if(t==='hurdle'){const al=lanes[Math.floor(Math.random()*lanes.length)];for(let i=-2;i<=2;i++)G.objs.push({kind:'star',x:al*LANE_W,y:0.6+(1-(i*i)/4)*1.1,z:z+i*0.9});}}
 }
 function burst(x,y,zw,col,n){for(let i=0;i<n;i++)G.parts.push({x,y,z:zw,vx:rnd(-2.5,2.5),vy:rnd(1,4.5),vz:G.curSpd+rnd(-2,2),life:rnd(0.5,0.9),col:Math.random()<0.3?'#fff':col,size:rnd(0.05,0.1)});}
 function sparkle(x,y,zw){for(let i=0;i<5;i++)G.parts.push({x,y,z:zw,vx:rnd(-1.5,1.5),vy:rnd(0.5,2.5),vz:G.curSpd,life:rnd(0.3,0.5),col:i%2?'#fff':'#ffd23f',size:0.05});}
 
-function move(d){if(scene!=='play'||G.caughtT>0)return;const nl=clamp(G.lane+d,-1,1);if(nl!==G.lane){G.lane=nl;sfx.move();}}
-function jump(){if(scene!=='play'||G.caughtT>0)return;if(G.y<=0.01){G.vy=8.6;G.slideT=0;sfx.jump();}}
+function move(d){if(scene!=='play'||G.caughtT>0)return;const nl=clamp(G.lane+d,-1,1);if(nl!==G.lane){G.lane=nl;G.zip=0.32;G.zipSide=d;sfx.swing();}}
+function jump(){if(scene!=='play'||G.caughtT>0)return;if(G.y<=0.01){G.vy=8.6;G.slideT=0;G.jumpT=0;sfx.jump();sfx.swing();}}
 function slide(){if(scene!=='play'||G.caughtT>0)return;if(G.y>0.05)G.vy=-12;G.slideT=0.75;sfx.slide();}
 function fireNet(){if(scene!=='play'||!G||G.netCD>0||G.caughtT>0)return;G.netCD=0.5;sfx.net();G.nets.push({x:G.x,y:G.y+0.9,z:0.4,t:0,rot:0});}
 function netHit(){
@@ -404,6 +421,11 @@ function updatePlay(dt){
   if(G.caughtT>0){G.caughtT+=dt;spd*=Math.max(0,1-G.caughtT/1.4);v.dist+=(4.2-v.dist)*Math.min(1,dt*1.5);v.ph+=dt*4;
     if(G.caughtT>2.3){scene='caught';bank();confettiBurst(120);}}
   G.curSpd=spd;W0.pz+=spd*dt;G.ph+=dt*spd*1.2;
+  G.zip=Math.max(0,G.zip-dt);G.jumpT+=dt;
+  {const sw=G.sw;sw.shoot=Math.min(1,sw.shoot+dt*9);
+   if(W0.pz-sw.startZ>=sw.len){sw.side=-sw.side;sw.startZ=W0.pz;sw.len=rnd(7,9);sw.az=W0.pz+sw.len*0.6;sw.ax=sw.side*(EDGE-0.02);sw.ay=rnd(5,7.5);sw.shoot=0;if(G.vehT<=0&&G.stumbleT<=0&&G.caughtT===0&&G.zip<=0&&G.y<=0.05)sfx.swing(0.5);}
+   const u=clamp((W0.pz-sw.startZ)/sw.len,0,1);G.swU=u;
+   const tgt=G.slideT>0?0.08:G.stumbleT>0?0.02:0.22+0.55*(2*u-1)*(2*u-1);G.swOff+=(tgt-G.swOff)*Math.min(1,dt*10);}
   G.x+=(G.lane*LANE_W-G.x)*Math.min(1,dt*14);CAMX+=(G.x*0.5-CAMX)*Math.min(1,dt*6);
   if(G.y>0||G.vy>0){G.vy-=26*dt;G.y+=G.vy*dt;if(G.y<=0){G.y=0;G.vy=0;}}
   if(G.caughtT===0){
@@ -417,14 +439,14 @@ function updatePlay(dt){
     if(v.dist<=16&&!G.saidRange){G.saidRange=true;say('Jetzt Netz werfen!');}
   }
   if(v.y>0||v.vy>0){v.vy-=24*dt;v.y+=v.vy*dt;if(v.y<=0){v.y=0;v.vy=0;}}
-  while(G.nextSpawn<W0.pz+ZMAX){spawnRow(G.nextSpawn);G.nextSpawn+=mode===2?rnd(9,15):Math.max(8.5,12.5-G.vi*1.2)+Math.random()*5;}
+  while(G.nextSpawn<W0.pz+ZMAX){spawnRow(G.nextSpawn);G.nextSpawn+=mode===2?rnd(9,15):rnd(12,18)-G.vi;}
   const sliding=G.slideT>0;
   for(const o of G.objs){
     if(o.dead)continue;const r=o.z-W0.pz;
     if(o.hit){o.kt+=dt;if(o.kt>0.8)o.dead=true;continue;}
     if(o.kind==='star'&&G.vehT>0&&r<10&&r>-0.5){const k=Math.min(1,dt*7);o.x+=(G.x-o.x)*k;o.y+=(G.y+0.75-o.y)*k;if(r>0)o.z-=r*Math.min(1,dt*4);}
     if(r<-0.8||r>0.8||Math.abs(o.x-G.x)>0.7)continue;
-    if(o.kind==='star'){const cy=G.y+(sliding?0.35:0.75);if(Math.abs(o.y-cy)<1.0){o.dead=true;G.stars++;sfx.star();sparkle(o.x,o.y,o.z);}}
+    if(o.kind==='star'){const cy=G.y+G.swOff+(sliding?0.35:0.75);if(Math.abs(o.y-cy)<1.0){o.dead=true;G.stars++;sfx.star();sparkle(o.x,o.y,o.z);}}
     else if(o.kind==='veh'){o.dead=true;G.vehT=7;sfx.veh();say('Turbo!');burst(G.x,0.8,W0.pz,hero.net,16);}
     else if(o.kind==='obs'&&G.caughtT===0){
       const hit=o.type==='hurdle'?G.y<0.6:o.type==='crate'?G.y<1.45:!sliding;
@@ -502,16 +524,43 @@ function drawNetProj(n){
   ctx.restore();ctx.globalAlpha=1;
 }
 function drawPlayer(){
-  shadowAt(G.x,0,0.45*(1-Math.min(0.5,G.y*0.3)));
-  const p=P(G.x,G.y,0);G.heroX=p.x;
-  ctx.save();ctx.translate(p.x,p.y);ctx.scale(p.s,p.s);
-  ctx.rotate((G.lane*LANE_W-G.x)*0.22);
+  const swinging=G.vehT<=0&&G.stumbleT<=0,off=G.vehT>0?0:G.swOff;
+  shadowAt(G.x,0,0.45*(1-Math.min(0.6,(G.y+off)*0.3)));
+  const p=P(G.x,G.y+off,0),s=p.s;G.heroX=p.x;
+  let rot=(G.lane*LANE_W-G.x)*0.22;
+  let A=null,shoot=1;
+  if(swinging){
+    if(G.zip>0){A=P(G.zipSide*(EDGE-0.02),4.8,3.2);shoot=Math.min(1,(0.32-G.zip)*10);}
+    else if(G.y>0.05){A=P(G.x*0.4,8.5,6.5);shoot=Math.min(1,G.jumpT*10);}
+    else{A=P(G.sw.ax,G.sw.ay,G.sw.az-W0.pz);shoot=G.sw.shoot;}
+  }
+  let th=Math.PI,side=1,hx=0,hy=0;
+  if(A){
+    side=A.x>=p.x?1:-1;const u=G.swU;rot+=side*0.12*(1-(2*u-1)*(2*u-1));
+    const dx=A.x-p.x,dy=A.y-p.y,c=Math.cos(rot),sn=Math.sin(rot);
+    const lx=(dx*c+dy*sn)/s,ly=(-dx*sn+dy*c)/s,rx=lx-side*0.26,ry=ly+0.8,rl=Math.hypot(rx,ry)||1;
+    th=Math.atan2(-rx,ry);
+    const hlx=side*0.26+rx/rl*0.42,hly=-0.8+ry/rl*0.42;
+    hx=p.x+(hlx*c-hly*sn)*s;hy=p.y+(hlx*sn+hly*c)*s;
+  }
+  ctx.save();ctx.translate(p.x,p.y);ctx.scale(s,s);ctx.rotate(rot);
   if(G.stumbleT>0){ctx.rotate(Math.sin(G.stumbleT*22)*0.18);if(Math.floor(T*12)%2===0)ctx.globalAlpha=0.55;}
   if(G.vehT>0){if(G.vehT<1.6&&Math.floor(T*10)%2)ctx.globalAlpha=0.6;drawVehicle(hero,T);}
-  else drawHeroBack(hero,G.ph,G.y>0.05,G.slideT>0,T);
+  else if(!A)drawHeroBack(hero,G.ph,G.y>0.05,false,T);
+  else{if(G.slideT>0)ctx.scale(1.1,0.75);drawHeroSwing(hero,T,th,side,Math.sin(T*5)*0.15-side*0.15,G.y>0.05);}
   ctx.globalAlpha=1;
   if(G.stumbleT>0)for(let i=0;i<3;i++){const a=T*6+i*2.09;drawStarShape(Math.cos(a)*0.35,-1.72+Math.sin(a)*0.1,0.09,'#ffd23f',0.02);}
   ctx.restore();
+  if(A){
+    const ex=hx+(A.x-hx)*shoot,ey=hy+(A.y-hy)*shoot;
+    ctx.lineCap='round';ctx.beginPath();ctx.moveTo(hx,hy);ctx.lineTo(ex,ey);
+    ctx.strokeStyle=hexA(hero.net,0.6);ctx.lineWidth=Math.max(4,s*0.08);ctx.stroke();
+    ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(2,s*0.03);ctx.stroke();
+    if(shoot>=1&&A.y>-50&&A.y<H+50){const r=Math.max(6,0.32*A.s);ctx.save();ctx.translate(A.x,A.y);
+      circ(0,0,r);ctx.fillStyle=hexA(hero.net,0.45);ctx.fill();ctx.save();circ(0,0,r);ctx.clip();ctx.beginPath();
+      for(let d=-2*r;d<=2*r;d+=r/2){ctx.moveTo(d-r,-r);ctx.lineTo(d+r,r);ctx.moveTo(d+r,-r);ctx.lineTo(d-r,r);}ctx.lineWidth=Math.max(1,r*0.1);ctx.strokeStyle='#fff';ctx.stroke();ctx.restore();
+      circ(0,0,r);ctx.lineWidth=Math.max(1.5,r*0.14);ctx.strokeStyle='#fff';ctx.stroke();ctx.restore();}
+  }
 }
 function drawParts(){for(const q of G.parts){const r=q.z-W0.pz;if(r<-D+0.5)continue;const p=P(q.x,q.y,r);ctx.globalAlpha=Math.min(1,q.life*2);circ(p.x,p.y,Math.max(1.5,q.size*p.s));ctx.fillStyle=q.col;ctx.fill();}ctx.globalAlpha=1;}
 
@@ -707,6 +756,7 @@ function noiseAt(t,dur,vol,freq,ftype,dest){const s=AC.createBufferSource();s.bu
 function noiseS(dur,vol,freq,ftype){if(!AC)return;noiseAt(AC.currentTime,dur,vol,freq,ftype,sfxGain);}
 const sfx={
   tap(){tone(660,0.08,'triangle',0.25);},
+  swing(v){v=v||1;noiseS(0.16,0.22*v,3200,'highpass');tone(1300,0.12,'sine',0.07*v,0,650);},
   star(){tone(1320,0.1,'triangle',0.16);tone(1760,0.14,'triangle',0.12,0.05);},
   move(){tone(480,0.08,'sine',0.12,0,760);},
   jump(){tone(320,0.22,'sine',0.25,0,760);},
